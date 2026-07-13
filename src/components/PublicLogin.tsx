@@ -1,0 +1,435 @@
+import React, { useState } from "react";
+import { 
+  Activity, 
+  Lock, 
+  UserCheck, 
+  AlertCircle, 
+  Sparkles, 
+  ArrowLeft, 
+  MapPin, 
+  PhoneCall, 
+  ShieldCheck,
+  UserPlus,
+  CheckCircle,
+  Briefcase
+} from "lucide-react";
+
+interface PublicLoginProps {
+  onLogin: () => void;
+  onBackToHome: () => void;
+}
+
+export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [regSuccess, setRegSuccess] = useState(false);
+
+  // Login state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Registration state
+  const [regName, setRegName] = useState("");
+  const [regRole, setRegRole] = useState<'Doctor' | 'Nurse' | 'Pharmacist' | 'Administrator' | 'Receptionist'>('Doctor');
+  const [regSpecialty, setRegSpecialty] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regDepartment, setRegDepartment] = useState("Emergency Department");
+  const [regShift, setRegShift] = useState<'Morning' | 'Evening' | 'Night'>('Morning');
+
+  const [authError, setAuthError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsSubmitting(true);
+
+    // Simulate clinician auth validation
+    setTimeout(() => {
+      if (!email || !password) {
+        setAuthError("Please provide both clinician email and security passkey.");
+        setIsSubmitting(false);
+        return;
+      }
+      onLogin();
+      setIsSubmitting(false);
+    }, 800);
+  };
+
+  const handleSubmitRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setRegSuccess(false);
+    setIsSubmitting(true);
+
+    if (!regName || !regEmail || !regPassword || !regDepartment) {
+      setAuthError("Please fill in all required fields marked with *");
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: regName,
+          role: regRole,
+          specialty: regSpecialty || undefined,
+          email: regEmail,
+          phone: regPhone || "+1 (555) 000-0000",
+          department: regDepartment,
+          status: "On Duty",
+          shift: regShift,
+          image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300"
+        })
+      });
+
+      if (res.ok) {
+        setRegSuccess(true);
+        setEmail(regEmail);
+        setPassword(regPassword);
+        setIsRegister(false); // transition back to sign-in so they can log in
+        setRegName("");
+        setRegEmail("");
+        setRegPassword("");
+        setRegSpecialty("");
+        setRegPhone("");
+      } else {
+        const errData = await res.json();
+        setAuthError(errData.error || "Failed to onboard clinician.");
+      }
+    } catch (err) {
+      console.error("Registration error:", err);
+      setAuthError("An error occurred during secure clinician registration.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleQuickDemoLogin = () => {
+    setEmail("clinical@careflow.org");
+    setPassword("demo-secure-access");
+    setAuthError("");
+    setIsSubmitting(true);
+
+    setTimeout(() => {
+      onLogin();
+      setIsSubmitting(false);
+    }, 600);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-slate-950" id="public-login-view">
+      {/* 1. PROFESSIONAL HEADER WITH BACK ROUTING */}
+      <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          
+          {/* Logo Branding */}
+          <button 
+            onClick={onBackToHome}
+            className="flex items-center space-x-3 text-left focus:outline-none group hover:opacity-90 transition"
+          >
+            <div className="h-10 w-10 rounded-xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/10">
+              <Activity className="h-6 w-6 text-slate-950 stroke-[2.5]" />
+            </div>
+            <div>
+              <h1 className="font-display font-extrabold text-lg text-white leading-tight tracking-wide flex items-center gap-1.5">
+                CareFlow <span className="text-teal-400 text-xs font-mono px-1.5 py-0.5 bg-teal-500/10 border border-teal-500/20 rounded">GEN HOSP</span>
+              </h1>
+              <p className="text-[10px] font-mono text-slate-500 tracking-wider uppercase">Portland Clinical District</p>
+            </div>
+          </button>
+
+          {/* Back Action */}
+          <button
+            onClick={onBackToHome}
+            className="flex items-center space-x-2 py-2 px-4 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold rounded-lg text-xs border border-slate-800 transition"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Homepage</span>
+          </button>
+        </div>
+      </header>
+
+      {/* 2. ROUTED LOGIN/REGISTRATION CANVAS */}
+      <main className="flex-grow flex items-center justify-center py-12 px-4 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-teal-950/25 via-slate-950 to-slate-950">
+        <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl animate-fade-in">
+          
+          {/* Header branding on form */}
+          <div className="p-6 border-b border-slate-800 bg-slate-950/40 text-center space-y-2">
+            <div className="mx-auto h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+              {isRegister ? <UserPlus className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
+            </div>
+            <h3 className="font-display font-extrabold text-white text-lg">
+              {isRegister ? "Clinician Onboarding & Registry" : "Secure Clinician Access"}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {isRegister 
+                ? "Register your clinical credentials to obtain secure access to Portland Clinical District."
+                : "Sign in to access EHR, bed assignments, clinical diagnostics & Copilot AI."}
+            </p>
+          </div>
+
+          {/* Tab Selector to toggle between Login & Registration */}
+          <div className="grid grid-cols-2 border-b border-slate-800 text-xs font-bold font-mono">
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegister(false);
+                setAuthError("");
+                setRegSuccess(false);
+              }}
+              className={`py-3.5 text-center transition uppercase tracking-wider border-r border-slate-800 ${
+                !isRegister 
+                  ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
+                  : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Portal Sign-In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegister(true);
+                setAuthError("");
+                setRegSuccess(false);
+              }}
+              className={`py-3.5 text-center transition uppercase tracking-wider ${
+                isRegister 
+                  ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
+                  : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Registry Signup
+            </button>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {/* Error Message */}
+            {authError && (
+              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl text-xs text-rose-300 flex items-start gap-2.5 animate-fade-in">
+                <AlertCircle className="h-4.5 w-4.5 text-rose-400 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            {/* Success Notification Banner */}
+            {regSuccess && (
+              <div className="p-3 bg-teal-950/40 border border-teal-900/40 rounded-xl text-xs text-teal-300 flex items-start gap-2.5 animate-fade-in">
+                <CheckCircle className="h-4.5 w-4.5 text-teal-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-white">Registry Registration Successful!</p>
+                  <p className="text-slate-300 mt-1">
+                    Your professional staff chart has been safely filed. You may now enter the secure portal using your email below.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!isRegister ? (
+              /* LOGIN FORM */
+              <form onSubmit={handleSubmitLogin} className="space-y-4 text-left">
+                {/* Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Clinician Registry Email *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="practitioner@careflow.org"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Security Passkey *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-lg shadow-teal-500/15"
+                  >
+                    <UserCheck className="h-4 w-4" />
+                    <span>{isSubmitting ? "Authenticating Clinician..." : "Access Secure EHR"}</span>
+                  </button>
+                </div>
+
+                {/* Demo Quick login bypass banner */}
+                <div className="pt-4 border-t border-slate-800 text-center space-y-3">
+                  <p className="text-[11px] text-slate-500">Quickly test the Hospital Clinical Suite and Copilot with our default demo profile:</p>
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoLogin}
+                    className="w-full py-2.5 px-4 bg-slate-950 hover:bg-slate-800 border border-teal-500/30 text-teal-400 hover:text-teal-300 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-2"
+                  >
+                    <Sparkles className="h-4 w-4 fill-teal-500/10" />
+                    <span>Single-Tap Clinician Demo Entry</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* REGISTRATION FORM */
+              <form onSubmit={handleSubmitRegister} className="space-y-4 text-left animate-fade-in">
+                <div className="grid grid-cols-2 gap-4">
+                  
+                  {/* Full Name */}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Full Professional Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dr. Arthur Pendragon, Nurse Mary Johnson"
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Role Category */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Role Category *</label>
+                    <select
+                      value={regRole}
+                      onChange={(e) => setRegRole(e.target.value as any)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    >
+                      <option value="Doctor">Doctor</option>
+                      <option value="Nurse">Nurse</option>
+                      <option value="Pharmacist">Pharmacist</option>
+                      <option value="Administrator">Administrator</option>
+                      <option value="Receptionist">Receptionist</option>
+                    </select>
+                  </div>
+
+                  {/* Specialty area */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Specialty Area</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pediatrics, Cardiology"
+                      value={regSpecialty}
+                      onChange={(e) => setRegSpecialty(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Professional Email Address */}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Professional Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="practitioner@careflow.org"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Passkey */}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Create Security Passkey / Password *</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Create your portal entry password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Phone number */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Phone / Pager Line</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. +1 (555) 019-2834"
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Department Assigned */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Department Assigned *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Emergency, Pediatrics, ICU"
+                      value={regDepartment}
+                      onChange={(e) => setRegDepartment(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+
+                  {/* Shift Assignment */}
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">Shift Assignment *</label>
+                    <select
+                      value={regShift}
+                      onChange={(e) => setRegShift(e.target.value as any)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3 py-2.5 rounded-xl focus:outline-none focus:border-teal-500"
+                    >
+                      <option value="Morning">Morning (06:00 - 14:00)</option>
+                      <option value="Evening">Evening (14:00 - 22:00)</option>
+                      <option value="Night">Night (22:00 - 06:00)</option>
+                    </select>
+                  </div>
+
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-lg shadow-teal-500/15"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>{isSubmitting ? "Onboarding Registry..." : "Create Clinician Account"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+          </div>
+        </div>
+      </main>
+
+      {/* 3. SECURE FOOTER */}
+      <footer className="bg-slate-900 border-t border-slate-850 py-10 text-xs text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6 text-left">
+          <div className="space-y-1">
+            <h4 className="font-display font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-teal-400" />
+              HIPAA Protected Security Gateway
+            </h4>
+            <p className="text-[11px] text-slate-500 max-w-xl">
+              This registry node requires active clinical credentials. All sessions, telemetry logs, and electronic medical updates are audited daily. Unauthorized access is strictly prohibited.
+            </p>
+          </div>
+          <div className="flex gap-4 font-mono text-[10px] text-slate-500">
+            <span>EHR Node ID: C-6d63502e</span>
+            <span>•</span>
+            <span>Registry Status: Active</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

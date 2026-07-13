@@ -1,0 +1,6 @@
+{
+  "name": "Hospital Management System",
+  "description": "An advanced hospital management system featuring scheduling, patient records, interactive analytics, billing, and a Gemini Clinical Copilot.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
