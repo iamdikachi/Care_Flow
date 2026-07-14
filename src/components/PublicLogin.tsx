@@ -11,7 +11,10 @@ import {
   ShieldCheck,
   UserPlus,
   CheckCircle,
-  Briefcase
+  Briefcase,
+  Mail,
+  KeyRound,
+  ArrowRight
 } from "lucide-react";
 
 interface PublicLoginProps {
@@ -19,13 +22,23 @@ interface PublicLoginProps {
   onBackToHome: () => void;
 }
 
+type ViewMode = 'login' | 'register' | 'forgot-password' | 'otp-verify' | 'reset-password';
+
 export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps) {
-  const [isRegister, setIsRegister] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('login');
   const [regSuccess, setRegSuccess] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
 
   // Login state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // Forgot password & reset states
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [generatedOtp, setGeneratedOtp] = useState("");
 
   // Registration state
   const [regName, setRegName] = useState("");
@@ -88,9 +101,10 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
 
       if (res.ok) {
         setRegSuccess(true);
+        setResetSuccess(false);
         setEmail(regEmail);
         setPassword(regPassword);
-        setIsRegister(false); // transition back to sign-in so they can log in
+        setViewMode('login'); // transition back to sign-in so they can log in
         setRegName("");
         setRegEmail("");
         setRegPassword("");
@@ -119,6 +133,124 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
       setIsSubmitting(false);
     }, 600);
   };
+
+  const handleRequestOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsSubmitting(true);
+
+    if (!forgotEmail) {
+      setAuthError("Please provide your registered clinician email.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    setTimeout(() => {
+      // Simulate sending OTP to the clinician's registered email
+      const mockOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedOtp(mockOtp);
+      setViewMode('otp-verify');
+      setIsSubmitting(false);
+    }, 1000);
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsSubmitting(true);
+
+    if (!otpCode) {
+      setAuthError("Please enter the 6-digit verification code.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (otpCode !== generatedOtp && otpCode !== "000000") {
+      setTimeout(() => {
+        setAuthError("Invalid security verification code. Please check and try again.");
+        setIsSubmitting(false);
+      }, 500);
+      return;
+    }
+
+    setTimeout(() => {
+      setViewMode('reset-password');
+      setIsSubmitting(false);
+    }, 800);
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsSubmitting(true);
+
+    if (newPassword.length < 6) {
+      setAuthError("Passkey must be at least 6 characters for HIPAA compliance.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setAuthError("Security passkeys do not match.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    setTimeout(() => {
+      // Update states to simulate passkey update
+      setPassword(newPassword);
+      setEmail(forgotEmail || email);
+      setResetSuccess(true);
+      setRegSuccess(false);
+      setViewMode('login');
+      setIsSubmitting(false);
+      
+      // Clean up temporary states
+      setForgotEmail("");
+      setOtpCode("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    }, 1200);
+  };
+
+  // Helper to determine the header info based on view mode
+  const getHeaderDetails = () => {
+    switch (viewMode) {
+      case 'register':
+        return {
+          icon: <UserPlus className="h-6 w-6" />,
+          title: "Clinician Onboarding & Registry",
+          desc: "Register your clinical credentials to obtain secure access to Portland Clinical District."
+        };
+      case 'forgot-password':
+        return {
+          icon: <Mail className="h-6 w-6" />,
+          title: "Reset Security Passkey",
+          desc: "Please verify your registry email address to initiate the passkey recovery procedure."
+        };
+      case 'otp-verify':
+        return {
+          icon: <ShieldCheck className="h-6 w-6" />,
+          title: "Verification Code Required",
+          desc: "Enter the security code dispatched to your professional clinician email node."
+        };
+      case 'reset-password':
+        return {
+          icon: <KeyRound className="h-6 w-6" />,
+          title: "Choose New Security Passkey",
+          desc: "Establish a secure, compliant new access passkey for your hospital account."
+        };
+      case 'login':
+      default:
+        return {
+          icon: <Lock className="h-6 w-6" />,
+          title: "Secure Clinician Access",
+          desc: "Sign in to access EHR, bed assignments, clinical diagnostics & Copilot AI."
+        };
+    }
+  };
+
+  const header = getHeaderDetails();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-teal-500 selection:text-slate-950" id="public-login-view">
@@ -160,51 +292,53 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
           {/* Header branding on form */}
           <div className="p-6 border-b border-slate-800 bg-slate-950/40 text-center space-y-2">
             <div className="mx-auto h-12 w-12 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
-              {isRegister ? <UserPlus className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
+              {header.icon}
             </div>
             <h3 className="font-display font-extrabold text-white text-lg">
-              {isRegister ? "Clinician Onboarding & Registry" : "Secure Clinician Access"}
+              {header.title}
             </h3>
             <p className="text-xs text-slate-500">
-              {isRegister 
-                ? "Register your clinical credentials to obtain secure access to Portland Clinical District."
-                : "Sign in to access EHR, bed assignments, clinical diagnostics & Copilot AI."}
+              {header.desc}
             </p>
           </div>
 
-          {/* Tab Selector to toggle between Login & Registration */}
-          <div className="grid grid-cols-2 border-b border-slate-800 text-xs font-bold font-mono">
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(false);
-                setAuthError("");
-                setRegSuccess(false);
-              }}
-              className={`py-3.5 text-center transition uppercase tracking-wider border-r border-slate-800 ${
-                !isRegister 
-                  ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
-                  : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              Portal Sign-In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsRegister(true);
-                setAuthError("");
-                setRegSuccess(false);
-              }}
-              className={`py-3.5 text-center transition uppercase tracking-wider ${
-                isRegister 
-                  ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
-                  : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              Registry Signup
-            </button>
-          </div>
+          {/* Tab Selector to toggle between Login & Registration (only show during default modes) */}
+          {(viewMode === 'login' || viewMode === 'register') && (
+            <div className="grid grid-cols-2 border-b border-slate-800 text-xs font-bold font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('login');
+                  setAuthError("");
+                  setRegSuccess(false);
+                  setResetSuccess(false);
+                }}
+                className={`py-3.5 text-center transition uppercase tracking-wider border-r border-slate-800 ${
+                  viewMode === 'login' 
+                    ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
+                    : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Portal Sign-In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewMode('register');
+                  setAuthError("");
+                  setRegSuccess(false);
+                  setResetSuccess(false);
+                }}
+                className={`py-3.5 text-center transition uppercase tracking-wider ${
+                  viewMode === 'register' 
+                    ? "bg-slate-950 text-teal-400 border-b-2 border-b-teal-500" 
+                    : "bg-slate-900/40 text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Registry Signup
+              </button>
+            </div>
+          )}
 
           <div className="p-6 space-y-4">
             {/* Error Message */}
@@ -215,7 +349,7 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
               </div>
             )}
 
-            {/* Success Notification Banner */}
+            {/* Success Registration Notification Banner */}
             {regSuccess && (
               <div className="p-3 bg-teal-950/40 border border-teal-900/40 rounded-xl text-xs text-teal-300 flex items-start gap-2.5 animate-fade-in">
                 <CheckCircle className="h-4.5 w-4.5 text-teal-400 shrink-0 mt-0.5" />
@@ -228,7 +362,20 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
               </div>
             )}
 
-            {!isRegister ? (
+            {/* Success Reset Notification Banner */}
+            {resetSuccess && (
+              <div className="p-3 bg-teal-950/40 border border-teal-900/40 rounded-xl text-xs text-teal-300 flex items-start gap-2.5 animate-fade-in">
+                <CheckCircle className="h-4.5 w-4.5 text-teal-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-white">Passkey Reset Complete!</p>
+                  <p className="text-slate-300 mt-1">
+                    Your security passkey was successfully updated. You may now sign in using your new credentials.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'login' && (
               /* LOGIN FORM */
               <form onSubmit={handleSubmitLogin} className="space-y-4 text-left">
                 {/* Email */}
@@ -246,7 +393,21 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
 
                 {/* Password */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Security Passkey *</label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-400">Security Passkey *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setViewMode('forgot-password');
+                        setAuthError("");
+                        setRegSuccess(false);
+                        setResetSuccess(false);
+                      }}
+                      className="text-xs text-teal-400 hover:text-teal-300 font-semibold transition focus:outline-none"
+                    >
+                      Forgot security passkey?
+                    </button>
+                  </div>
                   <input
                     type="password"
                     required
@@ -281,7 +442,9 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
                   </button>
                 </div>
               </form>
-            ) : (
+            )}
+
+            {viewMode === 'register' && (
               /* REGISTRATION FORM */
               <form onSubmit={handleSubmitRegister} className="space-y-4 text-left animate-fade-in">
                 <div className="grid grid-cols-2 gap-4">
@@ -402,6 +565,141 @@ export default function PublicLogin({ onLogin, onBackToHome }: PublicLoginProps)
                   >
                     <UserPlus className="h-4 w-4" />
                     <span>{isSubmitting ? "Onboarding Registry..." : "Create Clinician Account"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {viewMode === 'forgot-password' && (
+              /* REQUEST PASSKEY RESET FLOW */
+              <form onSubmit={handleRequestOtp} className="space-y-4 text-left animate-fade-in">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Registered Clinician Email *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="practitioner@careflow.org"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1.5">
+                    We will dispatch a secure validation code to this address if it is recognized on the registry node.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('login');
+                      setAuthError("");
+                    }}
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs border border-slate-800 transition flex items-center justify-center space-x-1.5"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-[2] py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-lg shadow-teal-500/15"
+                  >
+                    <Mail className="h-4 w-4" />
+                    <span>{isSubmitting ? "Checking Registry..." : "Send Verification Code"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {viewMode === 'otp-verify' && (
+              /* OTP VERIFICATION VIEW */
+              <form onSubmit={handleVerifyOtp} className="space-y-4 text-left animate-fade-in">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Security Verification Code *</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="e.g. 123456"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-center font-mono tracking-[0.5em] text-slate-200 px-3.5 py-3 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                  
+                  {/* Demo helper badge */}
+                  <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between text-[11px]">
+                    <span className="text-slate-500">Security bypass code:</span>
+                    <code className="text-teal-400 font-mono font-bold px-2 py-0.5 bg-teal-500/10 border border-teal-500/20 rounded select-all">
+                      {generatedOtp || "000000"}
+                    </code>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('forgot-password');
+                      setAuthError("");
+                      setOtpCode("");
+                    }}
+                    className="flex-1 py-3 bg-slate-950 hover:bg-slate-800 text-slate-300 font-bold rounded-xl text-xs border border-slate-800 transition flex items-center justify-center space-x-1.5"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                    <span>Back</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-[2] py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-lg shadow-teal-500/15"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>{isSubmitting ? "Verifying..." : "Verify and Continue"}</span>
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {viewMode === 'reset-password' && (
+              /* RESET SECURITY PASSKEY VIEW */
+              <form onSubmit={handleResetPassword} className="space-y-4 text-left animate-fade-in">
+                {/* New Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">New Security Passkey *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Minimum 6 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Confirm Security Passkey *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Verify your passkey entry"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-teal-500 transition"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs transition flex items-center justify-center space-x-1.5 disabled:opacity-50 shadow-lg shadow-teal-500/15"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    <span>{isSubmitting ? "Resetting passkey..." : "Confirm Passkey Reset"}</span>
                   </button>
                 </div>
               </form>
